@@ -1,2 +1,2 @@
-web: python Code1.py
+web: Code1.py
  
