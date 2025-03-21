@@ -27,26 +27,23 @@ SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
 # Hàm xác thực với Gmail API
 def gmail_authenticate(credentials_file):
     creds = None
-    token_file = f'token_{os.path.basename(credentials_file)}.pickle'  # Chỉ lấy tên file JSON
-
-    # Nếu đã có token, sử dụng lại
-    if os.path.exists(token_file):
-        with open(token_file, 'rb') as token:
+    # Nếu token đã tồn tại, tải nó ra
+    if os.path.exists('token.pickle'):
+        with open('token.pickle', 'rb') as token:
             creds = pickle.load(token)
 
-    # Nếu chưa có token hoặc hết hạn, yêu cầu đăng nhập
+    # Nếu không có token hoặc token hết hạn, yêu cầu người dùng đăng nhập
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file(credentials_file, SCOPES)
+            flow = InstalledAppFlow.from_client_secrets_file(
+                'client_secret_521752597957.json', SCOPES)
             creds = flow.run_local_server(port=0)
-
-        # Lưu lại token vào file hợp lệ
-        with open(token_file, 'wb') as token:
+        # Lưu lại token
+        with open('token.pickle', 'wb') as token:
             pickle.dump(creds, token)
-
-    return build('gmail', 'v1', credentials=creds)
+    return creds
 
 # Hàm lấy các email mới có chứa OTP từ TikTok
 def get_otp_emails(service, line_token):
