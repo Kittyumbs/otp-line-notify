@@ -15,7 +15,9 @@ app = Flask(__name__)
 @app.route('/')
 def home():
     return render_template('index.html')
-
+if __name__ == '__main__':
+    app.run(debug=True)
+    
 # Các phạm vi quyền truy cập
 SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
 
@@ -117,10 +119,7 @@ def main(credentials_file, line_token):
     else:
         print("❌ Không có email OTP nào trong 5 phút gần nhất.")
 
-    print("🚀 Chương trình hoàn tất!")
-
-if __name__ == '__main__':
-    app.run(debug=True)    
+    print("🚀 Chương trình hoàn tất!")    
 
 # Example call to the main function (when running the script)
 # Bạn cần thay đổi `YOUR_LINE_NOTIFY_TOKEN` thành token thật mà bạn có từ Line Notify
