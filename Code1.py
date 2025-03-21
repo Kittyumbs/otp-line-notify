@@ -1,4 +1,5 @@
 from flask import Flask, render_template
+from urllib.parse import quote
 import os
 import pickle
 import requests
@@ -8,6 +9,8 @@ from datetime import datetime, timedelta, timezone
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+# Sử dụng quote thay cho url_quote
+encoded_url = quote("https://example.com/your-url")
 
 # Tạo Flask app
 app = Flask(__name__)
