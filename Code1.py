@@ -1,3 +1,4 @@
+from flask import Flask, render_template
 import os
 import pickle
 import requests
@@ -7,6 +8,13 @@ from datetime import datetime, timedelta, timezone
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+
+# Tạo Flask app
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return render_template('index.html')
 
 # Các phạm vi quyền truy cập
 SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
