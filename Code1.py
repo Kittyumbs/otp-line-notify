@@ -119,8 +119,13 @@ def main(credentials_file, line_token):
 
     print("🚀 Chương trình hoàn tất!")
 
+if __name__ == '__main__':
+    app.run(debug=True)    
+
 # Example call to the main function (when running the script)
 # Bạn cần thay đổi `YOUR_LINE_NOTIFY_TOKEN` thành token thật mà bạn có từ Line Notify
 line_token = '0IxJmPEsNKZr42aAYBJIXOS8MKkCZy97GrbG9XM5esl'
 credentials_file = 'C:/Users/Kittyumbs/Downloads/TEST_OTP/client_secret_521752597957.json'  # Chỉnh lại đuôi `.json`
 main(credentials_file, line_token)
+
+
