@@ -20,20 +20,39 @@ SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
 # Hàm xác thực
 def gmail_authenticate(credentials_file, user_id):
     creds = None
-    token_file = f'token_{user_id}.pickle'
-    if os.path.exists(token_file):
-        with open(token_file, 'rb') as token:
-            creds = pickle.load(token)
+    # Không cần file token_*.pickle trên Heroku nữa
+
+    token_str = os.environ.get('GOOGLE_TOKEN')
+    if token_str:
+        try:
+            creds = pickle.loads(token_str.encode('utf-8')) # Chuyển string thành bytes rồi load
+        except Exception as e:
+            logging.error(f"Lỗi load token từ biến môi trường: {e}")
+            creds = None
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
+            # Nếu không có token hợp lệ, vẫn cần xác thực (chỉ xảy ra 1 lần trên local)
             flow = InstalledAppFlow.from_client_secrets_file(
                 credentials_file, SCOPES)
-            creds = flow.run_local_server(port=0)  # Chạy xác thực
-        with open(token_file, 'wb') as token:
-            pickle.dump(creds, token)
+            creds = flow.run_local_server(port=0)
+
+            # *KHÔNG* lưu token vào file trên Heroku
+            # Thay vào đó, cập nhật biến môi trường GOOGLE_TOKEN (CHỈ KHI CHẠY LOCAL)
+            # Việc này chỉ cần thiết khi bạn CHẠY LẦN ĐẦU trên máy local để lấy token
+            try: # Đảm bảo không lỗi khi không chạy local.
+                import io
+                token_bytes = io.BytesIO() # Dùng BytesIO thay vì file thật.
+                pickle.dump(creds, token_bytes)
+                os.environ['GOOGLE_TOKEN'] = token_bytes.getvalue().decode('utf-8') # Lưu vào biến môi trường (local)
+                logging.info("Đã cập nhật biến môi trường GOOGLE_TOKEN (local).")
+
+            except:
+                pass
+
+
 
     service = build('gmail', 'v1', credentials=creds)
     return service
@@ -108,9 +127,8 @@ def main(credentials_file, line_token, user_id):
 
 def main_loop():
     # Lấy biến môi trường
-
     line_token = os.environ.get('LINE_NOTIFY_TOKEN')
-    credentials_file = 'client_secret_521752597957.json' # Lấy trực tiếp
+    credentials_file = 'https://github.com/Kittyumbs/otp-line-notify/blob/main/client_secret_521752597957.json' # Đường dẫn đến file trong repo
     user_id = 'default'  #  Vì bạn chỉ dùng 1 tài khoản
 
     if not line_token:
