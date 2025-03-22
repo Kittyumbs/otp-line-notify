@@ -1,1 +1,1 @@
-web: gunicorn -w 4 Code1:app
+worker: python app.py
