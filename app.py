@@ -9,20 +9,16 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from tenacity import retry, stop_after_attempt, wait_fixed
 import logging
-import json
-from flask import Flask, render_template, request, redirect, url_for  # Import Flask
+import json  # Import thư viện json
+from flask import Flask, render_template, request
 
 # Cấu hình logging
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Các phạm vi quyền truy cập
 SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
-
-# --- Khởi tạo Flask app ---
 app = Flask(__name__)
 
-# --- Các hàm xác thực và lấy OTP (giữ nguyên) ---
 def gmail_authenticate(user_id):
     creds = None
 
@@ -38,21 +34,22 @@ def gmail_authenticate(user_id):
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
+           # Xác thực (chỉ trên local)
             try:
-                creds_info = json.loads(os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'))
-                with open("credentials.json", "w") as f:
-                    json.dump(creds_info, f)
-                flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
+                flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES) # Dùng file credentials.json
                 creds = flow.run_local_server(port=0)
                 import io
                 token_bytes = io.BytesIO()
                 pickle.dump(creds, token_bytes)
-                os.environ['GOOGLE_TOKEN'] = token_bytes.getvalue().decode('utf-8')
-                logging.info("Đã cập nhật GOOGLE_TOKEN (tạm thời trên local).")
-            except:
+                os.environ['GOOGLE_TOKEN'] = token_bytes.getvalue().decode('utf-8') # Cập nhật biến môi trường GOOGLE_TOKEN
+                logging.info("Đã cập nhật GOOGLE_TOKEN (local)")
+            except Exception as e:
+                logging.error(f"Error during local authentication: {e}") # Ghi log lỗi
                 pass
+
     service = build('gmail', 'v1', credentials=creds)
     return service
+#... (các hàm khác giữ nguyên) ...
 def get_otp_emails(service, line_token):
     try:
         now = datetime.now(timezone.utc)
@@ -131,13 +128,11 @@ def process_otp():
         return "Không có email OTP mới."
 
 if __name__ == "__main__":
-    # Tạo file credentials.json tạm thời từ biến môi trường (cho Heroku)
+  #Tạo file credentials.json TẠM THỜI
     try:
-        creds_info = json.loads(os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'))
-        with open("credentials.json", "w") as f:
-            json.dump(creds_info, f)
+      creds_info = json.loads(os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'))
+      with open("credentials.json", "w") as f:
+        json.dump(creds_info, f)
     except:
-        pass
-
-    # Chạy app (debug=True chỉ nên dùng khi phát triển)
-    app.run(debug=False)
+      pass
+    app.run(debug=False) # Bỏ debug=True
