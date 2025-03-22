@@ -4,11 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OTP Line Notify</title>
-    <!-- Thêm Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: 'Roboto', sans-serif;  /* Chỉnh font cho toàn bộ body */
+            font-family: 'Roboto', sans-serif; /* Chỉnh font cho toàn bộ body */
             text-align: center;
             background-color: #f0f8ff;
         }
@@ -36,6 +35,10 @@
 <body>
     <h1>Chào mừng bạn đến với OTP Line Notify!</h1>
     <p>Ứng dụng sẽ tự động lấy mã OTP từ email và gửi thông báo qua Line Notify.</p>
-    <a href="#" class="button">Nhấn vào đây</a>
+
+    <form action="/process_otp" method="post">
+        <button type="submit" class="button">Lấy OTP</button>
+    </form>
+
 </body>
 </html>

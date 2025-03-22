@@ -9,7 +9,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from tenacity import retry, stop_after_attempt, wait_fixed
 import logging
-import json  # Thêm thư viện json
+import json
+from flask import Flask, render_template, request, redirect, url_for  # Import Flask
 
 # Cấu hình logging
 logging.basicConfig(level=logging.INFO,
@@ -18,13 +19,14 @@ logging.basicConfig(level=logging.INFO,
 # Các phạm vi quyền truy cập
 SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
 
-# Hàm xác thực (sử dụng token cố định và biến môi trường)
+# --- Khởi tạo Flask app ---
+app = Flask(__name__)
+
+# --- Các hàm xác thực và lấy OTP (giữ nguyên) ---
 def gmail_authenticate(user_id):
     creds = None
 
-    # ✅ SỬ DỤNG TOKEN CỐ ĐỊNH (KHÔNG KHUYẾN KHÍCH)
-    token_str = "ya29.a0AeXRPp65Abdn9nS-_LGii1Dyn36pEbd6fl4PuQZdeTborp0x6Aat-Q7v7oySVY1IpbtFvdGi0GWCOOG8zrkVq89NR_6xKRxonG54Vc084qSTZu8nwTQWEXjNd4I9trCEV-5u_DlrOOtHLJVe7sJBgSuBAFt6KaSV8KTPVSwraCgYKAXoSARASFQHGX2Mi8QIs7B4BWsvQjpNgx0T2CQ0175"
-
+    token_str = os.environ.get('GOOGLE_TOKEN')
     if token_str:
         try:
             creds = pickle.loads(token_str.encode('utf-8'))
@@ -32,16 +34,25 @@ def gmail_authenticate(user_id):
             logging.error(f"Lỗi giải mã token: {e}")
             creds = None
 
-    # KHÔNG CÓ PHẦN XÁC THỰC TƯƠNG TÁC Ở ĐÂY (vì bạn dùng token cố định)
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
-
-
+        else:
+            try:
+                creds_info = json.loads(os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'))
+                with open("credentials.json", "w") as f:
+                    json.dump(creds_info, f)
+                flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
+                creds = flow.run_local_server(port=0)
+                import io
+                token_bytes = io.BytesIO()
+                pickle.dump(creds, token_bytes)
+                os.environ['GOOGLE_TOKEN'] = token_bytes.getvalue().decode('utf-8')
+                logging.info("Đã cập nhật GOOGLE_TOKEN (tạm thời trên local).")
+            except:
+                pass
     service = build('gmail', 'v1', credentials=creds)
     return service
-
-# (Các hàm get_otp_emails, send_line_notify_with_retry giữ nguyên)
 def get_otp_emails(service, line_token):
     try:
         now = datetime.now(timezone.utc)
@@ -97,33 +108,36 @@ def send_line_notify_with_retry(message, token):
         logging.error(f"Lỗi khi gửi Line Notify: {e}")
         return -1
 
-def main(line_token, user_id):
-    logging.info("Đang xác thực...")
-    service = gmail_authenticate(user_id)
+# --- Route cho trang chủ (index.html) ---
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-    logging.info("Đang kiểm tra email...")
-    otp_codes = get_otp_emails(service, line_token)
-
-    if otp_codes:
-        logging.info(f"Đã xử lý {len(otp_codes)} mã OTP.")
-    else:
-        logging.info("Không có email OTP mới.")
-    logging.info("Chương trình kết thúc.")
-
-if __name__ == "__main__":
-    # Lấy biến môi trường từ Heroku/local
+# --- Route để xử lý khi người dùng nhấn nút (nếu cần) ---
+@app.route('/process_otp', methods=['POST']) # Đổi tên route và method cho phù hợp
+def process_otp():
     line_token = os.environ.get('LINE_NOTIFY_TOKEN')
     user_id = 'default'
 
-    # Tạo file credentials.json TẠM THỜI từ biến môi trường
+    if not line_token:
+        return "Lỗi: Thiếu biến môi trường LINE_NOTIFY_TOKEN."
+
+    service = gmail_authenticate(user_id)
+    otp_codes = get_otp_emails(service, line_token)
+
+    if otp_codes:
+        return f"Đã xử lý {len(otp_codes)} mã OTP."
+    else:
+        return "Không có email OTP mới."
+
+if __name__ == "__main__":
+    # Tạo file credentials.json tạm thời từ biến môi trường (cho Heroku)
     try:
         creds_info = json.loads(os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'))
-        with open("credentials.json", "w") as f: # Ghi vào file tạm
+        with open("credentials.json", "w") as f:
             json.dump(creds_info, f)
     except:
-        pass  # Nếu không có biến môi trường, bỏ qua
+        pass
 
-    if not line_token:
-        logging.error("Lỗi: Thiếu biến môi trường LINE_NOTIFY_TOKEN.")
-    else:
-        main(line_token, user_id)
+    # Chạy app (debug=True chỉ nên dùng khi phát triển)
+    app.run(debug=False)
