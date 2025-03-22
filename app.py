@@ -3,18 +3,15 @@ import requests
 import re
 import time
 from datetime import datetime, timedelta, timezone
-from google.oauth2.credentials import Credentials  # Import Credentials
-from google.oauth2 import service_account #Dùng service_account
-from google.auth.transport.requests import Request
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google.oauth2 import service_account  # Dùng service_account
 from googleapiclient.discovery import build
 from tenacity import retry, stop_after_attempt, wait_fixed
 import logging
 import json
 from flask import Flask, render_template, request
-from dotenv import load_dotenv  # Nếu bạn dùng .env, giữ lại dòng này
+from dotenv import load_dotenv
 
-load_dotenv()  # Nếu bạn dùng .env, giữ lại dòng này
+load_dotenv()  # Tải biến môi trường từ .env (nếu có)
 
 # Cấu hình logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -23,7 +20,6 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
 app = Flask(__name__)
 
-# Không cần biến creds_info toàn cục nữa
 def gmail_authenticate(user_id):
     creds_info_str = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
     if not creds_info_str:
@@ -33,15 +29,13 @@ def gmail_authenticate(user_id):
     try:
         creds_info = json.loads(creds_info_str)
         creds = service_account.Credentials.from_service_account_info(
-            creds_info, scopes=SCOPES  # Không cần ['installed']
+            creds_info, scopes=SCOPES
         )
     except Exception as e:
         logging.error(f"Error creating credentials: {e}")
         return None
 
     # Không cần refresh token cho service account
-    # if creds.expired:
-    #     creds.refresh(Request())
 
     try:
         service = build('gmail', 'v1', credentials=creds)
@@ -112,13 +106,13 @@ def index():
 @app.route('/process_otp', methods=['POST'])
 def process_otp():
     line_token = os.environ.get('LINE_NOTIFY_TOKEN')
-    user_id = 'default'
+    user_id = 'default'  # Bạn có thể không cần dùng user_id
 
     if not line_token:
         return "Lỗi: Thiếu biến môi trường LINE_NOTIFY_TOKEN."
 
     service = gmail_authenticate(user_id)
-    if service is None:  # Thêm kiểm tra ở đây
+    if service is None:
         return "Lỗi: Không thể xác thực với Gmail."
 
     otp_codes = get_otp_emails(service, line_token)
@@ -129,5 +123,4 @@ def process_otp():
         return "Không có email OTP mới."
 
 if __name__ == "__main__":
-    # Không cần tạo file credentials.json tạm thời nữa
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
