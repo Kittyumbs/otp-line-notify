@@ -23,42 +23,43 @@ SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
 app = Flask(__name__)
 
 # Không cần biến creds_info toàn cục nữa
-
 def gmail_authenticate(user_id):
     creds_info_str = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
     if not creds_info_str:
-        logging.error("GOOGLE_APPLICATION_CREDENTIALS not set.") # Log lỗi
+        logging.error("GOOGLE_APPLICATION_CREDENTIALS not set.")
         return None
 
     try:
         creds_info = json.loads(creds_info_str)
-        # Chú ý: Kiểm tra xem JSON của bạn có key 'installed' hay 'web'
-        # Nếu là 'web', hãy thay 'installed' bằng 'web'
         creds = Credentials.from_authorized_user_info(
-            info=creds_info['installed'],
+            info=creds_info['installed'],  # Hoặc creds_info['web']
             scopes=SCOPES
         )
     except Exception as e:
-        logging.error(f"Error creating credentials: {e}") # Log lỗi
+        logging.error(f"Error creating credentials: {e}")
         return None
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             try:
-                creds.refresh(Request()) # Không truyền gì vào
+                creds.refresh(Request())
             except Exception as e:
-                logging.error(f"Error refreshing token: {e}") # Log lỗi
-                return None
+                logging.error(f"Error refreshing token: {e}")
+                return None  # Trả về None nếu refresh không thành công
         else:
-            logging.error("Invalid or missing credentials.") # Log lỗi
+            logging.error("Invalid or missing credentials.")
             return None
+
+    if creds is None: # Thêm phần kiểm tra này
+       logging.error("Credentials are None after all attempts.")
+       return None
 
     try:
         service = build('gmail', 'v1', credentials=creds)
         return service
     except Exception as e:
-         logging.error(f"error gmail service: {e}") # Log lỗi
-         return None
+        logging.error(f"Error building Gmail service: {e}")
+        return None
 
 def get_otp_emails(service, line_token):
     try:
@@ -132,7 +133,6 @@ def process_otp():
         return "Lỗi: Không thể xác thực với Gmail."
 
     otp_codes = get_otp_emails(service, line_token)
-
 
     if otp_codes:
         return f"Đã xử lý {len(otp_codes)} mã OTP."
