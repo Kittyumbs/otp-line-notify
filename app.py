@@ -4,6 +4,7 @@ import re
 import time
 from datetime import datetime, timedelta, timezone
 from google.oauth2.credentials import Credentials  # Import Credentials
+from google.oauth2 import service_account #Dùng service_account
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
@@ -31,28 +32,16 @@ def gmail_authenticate(user_id):
 
     try:
         creds_info = json.loads(creds_info_str)
-        creds = Credentials.from_authorized_user_info(
-            info=creds_info['installed'],  # Hoặc creds_info['web']
-            scopes=SCOPES
+        creds = service_account.Credentials.from_service_account_info(
+            creds_info, scopes=SCOPES  # Không cần ['installed']
         )
     except Exception as e:
         logging.error(f"Error creating credentials: {e}")
         return None
 
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            try:
-                creds.refresh(Request())
-            except Exception as e:
-                logging.error(f"Error refreshing token: {e}")
-                return None  # Trả về None nếu refresh không thành công
-        else:
-            logging.error("Invalid or missing credentials.")
-            return None
-
-    if creds is None: # Thêm phần kiểm tra này
-       logging.error("Credentials are None after all attempts.")
-       return None
+    # Không cần refresh token cho service account
+    # if creds.expired:
+    #     creds.refresh(Request())
 
     try:
         service = build('gmail', 'v1', credentials=creds)
