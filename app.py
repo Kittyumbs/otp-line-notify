@@ -3,7 +3,7 @@ import requests
 import re
 import time
 from datetime import datetime, timedelta, timezone
-from google.oauth2.credentials import Credentials
+from google.oauth2.credentials import Credentials  # Import Credentials
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
@@ -11,9 +11,9 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 import logging
 import json
 from flask import Flask, render_template, request
-from dotenv import load_dotenv  # Import thư viện dotenv
+from dotenv import load_dotenv  # Nếu bạn dùng .env, giữ lại dòng này
 
-load_dotenv() # Load biến môi trường từ .env (nếu có)
+load_dotenv()  # Nếu bạn dùng .env, giữ lại dòng này
 
 # Cấu hình logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -22,49 +22,43 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
 app = Flask(__name__)
 
-# Biến toàn cục để chứa thông tin credentials (từ biến môi trường)
-creds_info = {}
+# Không cần biến creds_info toàn cục nữa
 
 def gmail_authenticate(user_id):
-    creds = None
-    refresh_token = os.environ.get('GOOGLE_REFRESH_TOKEN')
+    creds_info_str = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
+    if not creds_info_str:
+        logging.error("GOOGLE_APPLICATION_CREDENTIALS not set.") # Log lỗi
+        return None
 
-    if refresh_token:
-        try:
-            creds = Credentials(
-                None,
-                refresh_token=refresh_token,
-                token_uri='https://oauth2.googleapis.com/token',
-                client_id=creds_info['web']['client_id'],
-                client_secret=creds_info['web']['client_secret'],
-                scopes=SCOPES)
-        except Exception as e:
-            logging.error(f"Lỗi tạo credentials từ refresh token: {e}")
-            creds = None
+    try:
+        creds_info = json.loads(creds_info_str)
+        # Chú ý: Kiểm tra xem JSON của bạn có key 'installed' hay 'web'
+        # Nếu là 'web', hãy thay 'installed' bằng 'web'
+        creds = Credentials.from_authorized_user_info(
+            info=creds_info['installed'],
+            scopes=SCOPES
+        )
+    except Exception as e:
+        logging.error(f"Error creating credentials: {e}") # Log lỗi
+        return None
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-            # Cập nhật refresh token (nếu có)
-            if creds.refresh_token:
-                # os.environ['GOOGLE_REFRESH_TOKEN'] = creds.refresh_token # Không cập nhật trực tiếp vào os.environ
-                logging.info("Đã refresh token (nhưng không cập nhật vào os.environ)") # Thay đổi log
-        else:
-            # Xác thực local (Chỉ chạy khi không có refresh_token)
             try:
-                flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
-                creds = flow.run_local_server(port=0)
-
-                if creds.refresh_token:
-                    # os.environ['GOOGLE_REFRESH_TOKEN'] = creds.refresh_token # Không cập nhật trực tiếp vào os.environ
-                    logging.info("Đã tạo và có refresh token (nhưng không lưu vào os.environ)") # Thay đổi log
-
+                creds.refresh(Request()) # Không truyền gì vào
             except Exception as e:
-                logging.error(f"Error during local authentication: {e}")
-                pass
+                logging.error(f"Error refreshing token: {e}") # Log lỗi
+                return None
+        else:
+            logging.error("Invalid or missing credentials.") # Log lỗi
+            return None
 
-    service = build('gmail', 'v1', credentials=creds)
-    return service
+    try:
+        service = build('gmail', 'v1', credentials=creds)
+        return service
+    except Exception as e:
+         logging.error(f"error gmail service: {e}") # Log lỗi
+         return None
 
 def get_otp_emails(service, line_token):
     try:
@@ -134,7 +128,11 @@ def process_otp():
         return "Lỗi: Thiếu biến môi trường LINE_NOTIFY_TOKEN."
 
     service = gmail_authenticate(user_id)
+    if service is None:  # Thêm kiểm tra ở đây
+        return "Lỗi: Không thể xác thực với Gmail."
+
     otp_codes = get_otp_emails(service, line_token)
+
 
     if otp_codes:
         return f"Đã xử lý {len(otp_codes)} mã OTP."
@@ -142,13 +140,5 @@ def process_otp():
         return "Không có email OTP mới."
 
 if __name__ == "__main__":
-    # Load creds_info từ biến môi trường (trước khi gọi gmail_authenticate)
-    try:
-        creds_info = json.loads(os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'))
-        # Tạo file credentials.json TẠM THỜI (chỉ cho local)
-        with open("credentials.json", "w") as f:
-            json.dump(creds_info, f)
-    except Exception as e:
-        logging.error(f"Lỗi tạo credentials.json: {e}")
-        pass
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080))) # Chạy trên Heroku
+    # Không cần tạo file credentials.json tạm thời nữa
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
