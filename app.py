@@ -8,7 +8,7 @@ from google.auth.transport.requests import Request
 
 
 # Khai báo phạm vi quyền truy cập Gmail API
-SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
+SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 
 def gmail_authenticate():
     """Xác thực OAuth2 từ biến môi trường trên Heroku (KHÔNG dùng credentials.json)."""
