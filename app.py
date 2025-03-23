@@ -24,19 +24,22 @@ def gmail_authenticate():
 
     # Kiểm tra nếu có biến môi trường chứa token
     if "TOKEN_PICKLE" in os.environ:
-        token_data = base64.b64decode(os.environ["TOKEN_PICKLE"])
-        creds = pickle.loads(token_data)
+        try:
+            token_data = base64.b64decode(os.environ["TOKEN_PICKLE"])
+            creds = pickle.loads(token_data)
 
-    # Nếu token không tồn tại hoặc hết hạn, yêu cầu đăng nhập lại
-    if not creds or not creds.valid:
-        flow = InstalledAppFlow.from_client_secrets_file("oauth2_credentials.json", SCOPES)
-        creds = flow.run_local_server(port=0)
-        
-        # Mã hóa token và lưu vào biến môi trường Heroku
-        token_data = base64.b64encode(pickle.dumps(creds)).decode()
-        os.environ["TOKEN_PICKLE"] = token_data  # Tạm thời, cần cập nhật thủ công Heroku
+            if not creds or not creds.valid:
+                print("❌ Token OAuth2 không hợp lệ hoặc đã hết hạn!")
+                return None
+            print("✅ Xác thực Gmail API thành công!")
+            return build("gmail", "v1", credentials=creds)
 
-    return build("gmail", "v1", credentials=creds)
+        except Exception as e:
+            print(f"❌ Lỗi khi giải mã TOKEN_PICKLE: {e}")
+            return None
+
+    print("❌ Không tìm thấy biến môi trường TOKEN_PICKLE!")
+    return None
 
 def get_otp_emails():
     """Truy vấn Gmail API để lấy OTP từ email của tài khoản đăng nhập."""
