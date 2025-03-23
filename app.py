@@ -12,20 +12,33 @@ def gmail_authenticate():
     """Xác thực OAuth2 từ biến môi trường trên Heroku (KHÔNG dùng credentials.json)."""
     creds = None
 
-    # Kiểm tra nếu có biến môi trường chứa token
     if "TOKEN_PICKLE" in os.environ:
+        print("📌 Tìm thấy biến môi trường TOKEN_PICKLE, bắt đầu giải mã...")
+
         try:
             token_data = base64.b64decode(os.environ["TOKEN_PICKLE"])
             creds = pickle.loads(token_data)
 
-            if not creds or not creds.valid:
-                print("❌ Token OAuth2 không hợp lệ hoặc đã hết hạn!")
+            print("📌 Kiểm tra trạng thái token...")
+
+            if not creds:
+                print("❌ Không tạo được credentials từ token!")
                 return None
+
+            if creds.expired and creds.refresh_token:
+                print("🔄 Token hết hạn, thử refresh...")
+                creds.refresh(Request())
+                print("✅ Token đã được làm mới!")
+
+            if not creds.valid:
+                print("❌ Token không hợp lệ ngay cả sau khi refresh!")
+                return None
+
             print("✅ Xác thực Gmail API thành công!")
             return build("gmail", "v1", credentials=creds)
 
         except Exception as e:
-            print(f"❌ Lỗi khi giải mã TOKEN_PICKLE: {e}")
+            print(f"❌ Lỗi khi giải mã hoặc làm mới TOKEN_PICKLE: {e}")
             return None
 
     print("❌ Không tìm thấy biến môi trường TOKEN_PICKLE!")
