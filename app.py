@@ -16,7 +16,7 @@ SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 app = Flask(__name__)
 
 # Gmail tập trung nhận OTP
-CENTRALIZED_GMAIL = "centralized.otp@gmail.com"
+CENTRALIZED_GMAIL = "me"
 
 def gmail_authenticate():
     """Xác thực OAuth2 từ biến môi trường trên Heroku."""
@@ -39,18 +39,18 @@ def gmail_authenticate():
     return build("gmail", "v1", credentials=creds)
 
 def get_otp_emails():
-    """Truy vấn Gmail API để lấy OTP từ email."""
+    """Truy vấn Gmail API để lấy OTP từ email của tài khoản đăng nhập."""
     service = gmail_authenticate()
     otp_codes = []
 
     try:
-        results = service.users().messages().list(userId=CENTRALIZED_GMAIL, maxResults=5).execute()
+        # Sửa userId thành "me" để chỉ lấy email của tài khoản đã xác thực OAuth2
+        results = service.users().messages().list(userId="me", maxResults=5).execute()
         messages = results.get("messages", [])
 
         if messages:
-            logging.info(f"Tìm thấy {len(messages)} email OTP.")
             for msg in messages:
-                message = service.users().messages().get(userId=CENTRALIZED_GMAIL, id=msg["id"]).execute()
+                message = service.users().messages().get(userId="me", id=msg["id"]).execute()
                 subject = ""
 
                 for header in message["payload"]["headers"]:
@@ -58,17 +58,16 @@ def get_otp_emails():
                         subject = header["value"]
                         break
 
-                # Tìm OTP (mã 6 chữ số)
+                # Tìm OTP trong tiêu đề email (6 chữ số)
                 otp_match = re.search(r'\b\d{6}\b', subject)
                 if otp_match:
                     otp_code = otp_match.group()
                     otp_codes.append(otp_code)
-                    logging.info(f"OTP tìm thấy: {otp_code}")
 
         return otp_codes
 
     except Exception as e:
-        logging.error(f"Lỗi khi lấy OTP từ Gmail: {e}")
+        print(f"Lỗi khi lấy OTP từ Gmail: {e}")
         return []
 
 @app.route('/')
