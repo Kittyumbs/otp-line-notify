@@ -5,13 +5,12 @@ import requests
 import re
 import datetime
 from googleapiclient.discovery import build
-from google_auth_oauthlib.flow import InstalledAppFlow
 
 # Khai báo phạm vi quyền truy cập Gmail API
 SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
 
 def gmail_authenticate():
-    """Xác thực OAuth2 từ biến môi trường trên Heroku."""
+    """Xác thực OAuth2 từ biến môi trường trên Heroku (KHÔNG cần oauth2_credentials.json)."""
     creds = None
 
     # Lấy token OAuth2 từ biến môi trường
@@ -20,27 +19,26 @@ def gmail_authenticate():
         creds = pickle.loads(token_data)
 
     if not creds or not creds.valid:
-        flow = InstalledAppFlow.from_client_secrets_file("oauth2_credentials.json", SCOPES)
-        creds = flow.run_local_server(port=0)
-
-        # Mã hóa token và lưu vào biến môi trường Heroku (chỉ có tác dụng tạm thời)
-        token_data = base64.b64encode(pickle.dumps(creds)).decode()
-        os.environ["TOKEN_PICKLE"] = token_data  
+        print("❌ Token không hợp lệ hoặc đã hết hạn!")
+        return None
 
     return build("gmail", "v1", credentials=creds)
 
 def get_recent_unread_otp_emails():
-    """Lấy các email OTP chưa đọc trong 5 phút gần nhất và đánh dấu đã đọc."""
+    """Lấy các email OTP từ TikTok chưa đọc trong 5 phút gần nhất và đánh dấu đã đọc."""
     service = gmail_authenticate()
+    if service is None:
+        print("⚠ Không thể xác thực Gmail API.")
+        return []
+
     otp_codes = []
 
     try:
-        # Tính timestamp cho 5 phút trước (đổi về dạng Unix timestamp)
+        # Tính timestamp cho 5 phút trước
         five_minutes_ago = int((datetime.datetime.utcnow() - datetime.timedelta(minutes=5)).timestamp())
 
-        # Chỉ lấy email chưa đọc trong 5 phút gần nhất
-        query = f'after:{five_minutes_ago} subject:(Mã xác minh)'
-
+        # Chỉ lấy email từ TikTok, chưa đọc, trong 5 phút gần nhất
+        query = f'from:register@account.tiktok.com is:unread after:{five_minutes_ago}'
         print(f"📌 Truy vấn Gmail với query: {query}")  # Debug query
 
         # Tìm các email phù hợp
@@ -48,7 +46,7 @@ def get_recent_unread_otp_emails():
         messages = results.get("messages", [])
 
         if messages:
-            print(f"✅ Tìm thấy {len(messages)} email phù hợp!")
+            print(f"✅ Tìm thấy {len(messages)} email OTP phù hợp!")
 
             for msg in messages:
                 message = service.users().messages().get(userId="me", id=msg["id"]).execute()
@@ -69,12 +67,15 @@ def get_recent_unread_otp_emails():
                     print(f"🔹 OTP tìm thấy: {otp_code}")  # Debug OTP
 
                 # Đánh dấu email là đã đọc
-                service.users().messages().modify(
-                    userId="me",
-                    id=msg["id"],
-                    body={"removeLabelIds": ["UNREAD"]}
-                ).execute()
-                print("✅ Đã cập nhật trạng thái email thành 'Đã đọc'")
+                try:
+                    service.users().messages().modify(
+                        userId="me",
+                        id=msg["id"],
+                        body={"removeLabelIds": ["UNREAD"]}
+                    ).execute()
+                    print(f"✅ Đã cập nhật email {msg['id']} thành 'Đã đọc'")
+                except Exception as e:
+                    print(f"❌ Lỗi khi cập nhật trạng thái email: {e}")
 
         return otp_codes
 
