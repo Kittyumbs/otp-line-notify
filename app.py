@@ -3,14 +3,13 @@ import pickle
 import base64
 import requests
 import re
-import datetime
 from googleapiclient.discovery import build
 
 # Khai báo phạm vi quyền truy cập Gmail API
 SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
 
 def gmail_authenticate():
-    """Xác thực OAuth2 từ biến môi trường trên Heroku (KHÔNG cần oauth2_credentials.json)."""
+    """Xác thực OAuth2 từ biến môi trường trên Heroku."""
     creds = None
 
     # Lấy token OAuth2 từ biến môi trường
@@ -19,13 +18,13 @@ def gmail_authenticate():
         creds = pickle.loads(token_data)
 
     if not creds or not creds.valid:
-        print("❌ Token không hợp lệ hoặc đã hết hạn!")
+        print("❌ Token OAuth2 không hợp lệ hoặc đã hết hạn!")
         return None
 
     return build("gmail", "v1", credentials=creds)
 
 def get_recent_unread_otp_emails():
-    """Lấy các email OTP từ TikTok chưa đọc trong 5 phút gần nhất và đánh dấu đã đọc."""
+    """Lấy các email OTP chưa đọc từ TikTok và đánh dấu đã đọc."""
     service = gmail_authenticate()
     if service is None:
         print("⚠ Không thể xác thực Gmail API.")
@@ -34,11 +33,8 @@ def get_recent_unread_otp_emails():
     otp_codes = []
 
     try:
-        # Tính timestamp cho 5 phút trước
-        five_minutes_ago = int((datetime.datetime.utcnow() - datetime.timedelta(minutes=5)).timestamp())
-
-        # Chỉ lấy email từ TikTok, chưa đọc, trong 5 phút gần nhất
-        query = f'from:register@account.tiktok.com is:unread after:{five_minutes_ago}'
+        # Chỉ lấy email từ TikTok chưa đọc
+        query = 'from:register@account.tiktok.com is:unread'
         print(f"📌 Truy vấn Gmail với query: {query}")  # Debug query
 
         # Tìm các email phù hợp
@@ -120,7 +116,7 @@ def process_otp():
         send_line_notify(otp_message)
         return otp_message
     else:
-        return "⚠ Không có email OTP mới trong 5 phút gần nhất."
+        return "⚠ Không có email OTP mới."
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
