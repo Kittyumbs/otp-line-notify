@@ -19,7 +19,6 @@ def gmail_authenticate():
         token_data = base64.b64decode(os.environ["TOKEN_PICKLE"])
         creds = pickle.loads(token_data)
 
-    # Nếu token không hợp lệ, yêu cầu đăng nhập lại
     if not creds or not creds.valid:
         flow = InstalledAppFlow.from_client_secrets_file("oauth2_credentials.json", SCOPES)
         creds = flow.run_local_server(port=0)
@@ -36,17 +35,21 @@ def get_recent_unread_otp_emails():
     otp_codes = []
 
     try:
-        # Tính timestamp cho 5 phút trước
+        # Tính timestamp cho 5 phút trước (đổi về dạng Unix timestamp)
         five_minutes_ago = int((datetime.datetime.utcnow() - datetime.timedelta(minutes=5)).timestamp())
 
         # Chỉ lấy email chưa đọc trong 5 phút gần nhất
-        query = f'from:register@account.tiktok.com subject:(Mã xác minh) is:unread after:{five_minutes_ago}'
-        
+        query = f'after:{five_minutes_ago} subject:(Mã xác minh)'
+
+        print(f"📌 Truy vấn Gmail với query: {query}")  # Debug query
+
         # Tìm các email phù hợp
         results = service.users().messages().list(userId="me", q=query, maxResults=5).execute()
         messages = results.get("messages", [])
 
         if messages:
+            print(f"✅ Tìm thấy {len(messages)} email phù hợp!")
+
             for msg in messages:
                 message = service.users().messages().get(userId="me", id=msg["id"]).execute()
                 subject = ""
@@ -56,11 +59,14 @@ def get_recent_unread_otp_emails():
                         subject = header["value"]
                         break
 
+                print(f"📩 Tiêu đề email: {subject}")  # Debug tiêu đề email
+
                 # Tìm OTP trong tiêu đề email (6 chữ số)
                 otp_match = re.search(r'\b\d{6}\b', subject)
                 if otp_match:
                     otp_code = otp_match.group()
                     otp_codes.append(otp_code)
+                    print(f"🔹 OTP tìm thấy: {otp_code}")  # Debug OTP
 
                 # Đánh dấu email là đã đọc
                 service.users().messages().modify(
@@ -68,6 +74,7 @@ def get_recent_unread_otp_emails():
                     id=msg["id"],
                     body={"removeLabelIds": ["UNREAD"]}
                 ).execute()
+                print("✅ Đã cập nhật trạng thái email thành 'Đã đọc'")
 
         return otp_codes
 
