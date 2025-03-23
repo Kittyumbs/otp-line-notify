@@ -3,7 +3,6 @@ import pickle
 import base64
 import requests
 import re
-import datetime
 from googleapiclient.discovery import build
 
 # Khai báo phạm vi quyền truy cập Gmail API
@@ -32,8 +31,8 @@ def gmail_authenticate():
     print("❌ Không tìm thấy biến môi trường TOKEN_PICKLE!")
     return None
 
-def get_recent_unread_otp_emails():
-    """Lấy các email OTP từ TikTok chưa đọc trong 5 phút gần nhất và đánh dấu đã đọc."""
+def get_unread_otp_emails():
+    """Lấy các email OTP từ TikTok chưa đọc và đánh dấu đã đọc."""
     service = gmail_authenticate()
     if service is None:
         print("⚠ Không thể xác thực Gmail API.")
@@ -42,11 +41,8 @@ def get_recent_unread_otp_emails():
     otp_codes = []
 
     try:
-        # Tính timestamp cho 5 phút trước
-        five_minutes_ago = int((datetime.datetime.utcnow() - datetime.timedelta(minutes=5)).timestamp())
-
-        # Chỉ lấy email từ TikTok, chưa đọc, trong 5 phút gần nhất
-        query = f'from:register@account.tiktok.com is:unread after:{five_minutes_ago}'
+        # Chỉ lấy email từ TikTok chưa đọc
+        query = 'from:register@account.tiktok.com is:unread'
         print(f"📌 Truy vấn Gmail với query: {query}")  # Debug query
 
         # Tìm các email phù hợp
@@ -121,14 +117,14 @@ def index():
 
 @app.route('/process_otp', methods=['POST'])
 def process_otp():
-    otp_codes = get_recent_unread_otp_emails()
+    otp_codes = get_unread_otp_emails()
 
     if otp_codes:
         otp_message = f"🔹 Đã xử lý {len(otp_codes)} mã OTP: {', '.join(otp_codes)}"
         send_line_notify(otp_message)
         return otp_message
     else:
-        return "⚠ Không có email OTP mới trong 5 phút gần nhất."
+        return "⚠ Không có email OTP mới."
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
