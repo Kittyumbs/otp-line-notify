@@ -4,6 +4,8 @@ import base64
 import requests
 import re
 from googleapiclient.discovery import build
+from google.auth.transport.requests import Request
+
 
 # Khai báo phạm vi quyền truy cập Gmail API
 SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
@@ -27,7 +29,7 @@ def gmail_authenticate():
 
             if creds.expired and creds.refresh_token:
                 print("🔄 Token hết hạn, thử refresh...")
-                creds.refresh(Request())
+                creds.refresh(Request())  # Sửa lỗi thiếu Request
                 print("✅ Token đã được làm mới!")
 
             if not creds.valid:
