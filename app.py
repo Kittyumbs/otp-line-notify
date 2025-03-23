@@ -1,25 +1,16 @@
 import os
 import pickle
 import base64
-import logging
+import requests
 import re
-from flask import Flask, render_template, request
-from google_auth_oauthlib.flow import InstalledAppFlow
+import datetime
 from googleapiclient.discovery import build
 
-# Cấu hình logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-
-# Khai báo phạm vi truy cập Gmail API
-SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
-
-app = Flask(__name__)
-
-# Gmail tập trung nhận OTP
-CENTRALIZED_GMAIL = "me"
+# Khai báo phạm vi quyền truy cập Gmail API
+SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
 
 def gmail_authenticate():
-    """Xác thực OAuth2 từ biến môi trường trên Heroku."""
+    """Xác thực OAuth2 từ biến môi trường trên Heroku (KHÔNG dùng credentials.json)."""
     creds = None
 
     # Kiểm tra nếu có biến môi trường chứa token
@@ -41,17 +32,30 @@ def gmail_authenticate():
     print("❌ Không tìm thấy biến môi trường TOKEN_PICKLE!")
     return None
 
-def get_otp_emails():
-    """Truy vấn Gmail API để lấy OTP từ email của tài khoản đăng nhập."""
+def get_recent_unread_otp_emails():
+    """Lấy các email OTP từ TikTok chưa đọc trong 5 phút gần nhất và đánh dấu đã đọc."""
     service = gmail_authenticate()
+    if service is None:
+        print("⚠ Không thể xác thực Gmail API.")
+        return []
+
     otp_codes = []
 
     try:
-        # Sửa userId thành "me" để chỉ lấy email của tài khoản đã xác thực OAuth2
-        results = service.users().messages().list(userId="me", maxResults=5).execute()
+        # Tính timestamp cho 5 phút trước
+        five_minutes_ago = int((datetime.datetime.utcnow() - datetime.timedelta(minutes=5)).timestamp())
+
+        # Chỉ lấy email từ TikTok, chưa đọc, trong 5 phút gần nhất
+        query = f'from:register@account.tiktok.com is:unread after:{five_minutes_ago}'
+        print(f"📌 Truy vấn Gmail với query: {query}")  # Debug query
+
+        # Tìm các email phù hợp
+        results = service.users().messages().list(userId="me", q=query, maxResults=5).execute()
         messages = results.get("messages", [])
 
         if messages:
+            print(f"✅ Tìm thấy {len(messages)} email OTP phù hợp!")
+
             for msg in messages:
                 message = service.users().messages().get(userId="me", id=msg["id"]).execute()
                 subject = ""
@@ -61,18 +65,55 @@ def get_otp_emails():
                         subject = header["value"]
                         break
 
+                print(f"📩 Tiêu đề email: {subject}")  # Debug tiêu đề email
+
                 # Tìm OTP trong tiêu đề email (6 chữ số)
                 otp_match = re.search(r'\b\d{6}\b', subject)
                 if otp_match:
                     otp_code = otp_match.group()
                     otp_codes.append(otp_code)
+                    print(f"🔹 OTP tìm thấy: {otp_code}")  # Debug OTP
+
+                # Đánh dấu email là đã đọc
+                try:
+                    service.users().messages().modify(
+                        userId="me",
+                        id=msg["id"],
+                        body={"removeLabelIds": ["UNREAD"]}
+                    ).execute()
+                    print(f"✅ Đã cập nhật email {msg['id']} thành 'Đã đọc'")
+                except Exception as e:
+                    print(f"❌ Lỗi khi cập nhật trạng thái email: {e}")
 
         return otp_codes
 
     except Exception as e:
-        print(f"Lỗi khi lấy OTP từ Gmail: {e}")
+        print(f"❌ Lỗi khi lấy OTP từ Gmail: {e}")
         return []
 
+def send_line_notify(message):
+    """Gửi OTP qua LINE Notify."""
+    line_token = os.getenv("LINE_NOTIFY_TOKEN", "")
+
+    if not line_token:
+        print("⚠ Không tìm thấy LINE_NOTIFY_TOKEN trong biến môi trường!")
+        return False
+
+    headers = {"Authorization": f"Bearer {line_token}"}
+    data = {"message": message}
+    response = requests.post("https://notify-api.line.me/api/notify", headers=headers, data=data)
+
+    if response.status_code == 200:
+        print("✅ Đã gửi OTP qua LINE Notify thành công!")
+        return True
+    else:
+        print(f"❌ Lỗi khi gửi LINE Notify: {response.text}")
+        return False
+
+# Flask app
+from flask import Flask, render_template, request
+
+app = Flask(__name__)
 
 @app.route('/')
 def index():
@@ -80,12 +121,14 @@ def index():
 
 @app.route('/process_otp', methods=['POST'])
 def process_otp():
-    otp_codes = get_otp_emails()
+    otp_codes = get_recent_unread_otp_emails()
 
     if otp_codes:
-        return f"Đã xử lý {len(otp_codes)} mã OTP: {', '.join(otp_codes)}"
+        otp_message = f"🔹 Đã xử lý {len(otp_codes)} mã OTP: {', '.join(otp_codes)}"
+        send_line_notify(otp_message)
+        return otp_message
     else:
-        return "Không có email OTP mới."
+        return "⚠ Không có email OTP mới trong 5 phút gần nhất."
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
