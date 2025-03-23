@@ -1,3 +1,3 @@
-credentials.json
-*.pyc
+token.pickle
+client_secret_2_521752597957.json
 __pycache__/
