@@ -4,6 +4,7 @@ import base64
 import requests
 import re
 import time
+import json
 from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
 from flask import Flask, render_template, request
@@ -129,26 +130,48 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
-    return render_template("index.html", history=otp_history)
-
+    return render_template("index.html", history=load_history())
 
 @app.route('/process_otp', methods=['POST'])
 def process_otp():
     otp_codes = get_recent_unread_otp_emails()
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    history = load_history()
+
     if otp_codes:
         otp_message = f"🔹 Đã xử lý {len(otp_codes)} mã OTP: {', '.join(otp_codes)}"
         send_line_notify(otp_message)
-        otp_history.append({"time": timestamp, "result": otp_message})
-        return otp_message
+        history.append({"time": timestamp, "result": otp_message})
     else:
-        no_otp_msg = "⚠ Không có email OTP mới trong 5 phút gần nhất."
-        otp_history.append({"time": timestamp, "result": no_otp_msg})
-        return no_otp_msg
+        otp_message = "⚠ Không có email OTP mới trong 5 phút gần nhất."
+        history.append({"time": timestamp, "result": otp_message})
+
+    save_history(history)
+    return otp_message
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
 
 # Biến toàn cục lưu lịch sử OTP
-otp_history = []
+HISTORY_FILE = "/tmp/otp_history.json"
+
+def load_history():
+    try:
+        if os.path.exists(HISTORY_FILE):
+            with open(HISTORY_FILE, "r") as f:
+                data = json.load(f)
+                # Kiểm tra nếu lịch sử là của hôm nay
+                if data and data[0]["time"].startswith(datetime.now().strftime("%Y-%m-%d")):
+                    return data
+        return []
+    except Exception as e:
+        print(f"⚠️ Lỗi đọc file lịch sử: {e}")
+        return []
+
+def save_history(history):
+    try:
+        with open(HISTORY_FILE, "w") as f:
+            json.dump(history, f)
+    except Exception as e:
+        print(f"⚠️ Lỗi ghi file lịch sử: {e}")
