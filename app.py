@@ -52,11 +52,11 @@ def gmail_authenticate():
 def get_recent_unread_otp_emails():
     """Lấy email OTP từ TikTok trong 5 phút gần nhất và đánh dấu đã đọc."""
     service = gmail_authenticate()
-if service is None:
-    print("⚠ Không thể xác thực Gmail API.")
-    # Log lỗi chi tiết nếu cần
-    app.logger.error("Token API không hợp lệ!")
-    return "Token API bị lỗi, vui lòng liên hệ user 212078 - Anh Duy để được hỗ trợ.", 500
+    if service is None:
+        print("⚠ Không thể xác thực Gmail API.")
+        # Log lỗi chi tiết nếu cần
+        app.logger.error("Token API không hợp lệ!")
+        return "Token API bị lỗi, vui lòng liên hệ user 212078 - Anh Duy để được hỗ trợ.", 500
 
     otp_codes = []
     
