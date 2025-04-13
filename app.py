@@ -9,6 +9,7 @@ from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
 from flask import Flask, render_template, request
 from datetime import datetime
+from flask_cors import CORS
 
 # Khai báo phạm vi quyền truy cập Gmail API
 SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
@@ -129,6 +130,7 @@ def send_line_notify(message):
 
 # Flask app
 app = Flask(__name__)
+CORS(app)  # Cho phép gọi API từ extension
 
 # Biến toàn cục lưu lịch sử OTP
 HISTORY_FILE = "/tmp/otp_history.json"
