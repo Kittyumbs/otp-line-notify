@@ -53,8 +53,8 @@ def get_recent_unread_otp_emails():
     """Lấy email OTP từ TikTok trong 5 phút gần nhất và đánh dấu đã đọc."""
     service = gmail_authenticate()
     if service is None:
-        print("⚠ Không thể xác thực Gmail API.")
-        return []
+    raise Exception("Token API bị lỗi vui lòng liên hệ user 212078 - Anh Duy để được hỗ trợ!")
+
 
     otp_codes = []
     
@@ -157,21 +157,26 @@ def index():
 
 @app.route('/process_otp', methods=['POST'])
 def process_otp():
-    otp_codes = get_recent_unread_otp_emails()
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
     history = load_history()
 
-    if otp_codes:
-        otp_message = f"🔹 Đã xử lý {len(otp_codes)} mã OTP: {', '.join(otp_codes)}"
-        send_line_notify(otp_message)
-        history.append({"time": timestamp, "result": otp_message})
-    else:
-        otp_message = "⚠ Không có email OTP mới trong 5 phút gần nhất."
-        history.append({"time": timestamp, "result": otp_message})
+    try:
+        otp_codes = get_recent_unread_otp_emails()
 
+        if otp_codes:
+            otp_message = f"🔹 Đã xử lý {len(otp_codes)} mã OTP: {', '.join(otp_codes)}"
+            send_line_notify(otp_message)
+        else:
+            otp_message = "⚠ Không có email OTP mới trong 5 phút gần nhất."
+
+    except Exception as e:
+        otp_message = str(e)
+
+    history.append({"time": timestamp, "result": otp_message})
     save_history(history)
+
     return otp_message
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
