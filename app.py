@@ -128,6 +128,29 @@ def send_line_notify(message):
 # Flask app
 app = Flask(__name__)
 
+# Biến toàn cục lưu lịch sử OTP
+HISTORY_FILE = "/tmp/otp_history.json"
+
+def load_history():
+    try:
+        if os.path.exists(HISTORY_FILE):
+            with open(HISTORY_FILE, "r") as f:
+                data = json.load(f)
+                # Kiểm tra nếu lịch sử là của hôm nay
+                if data and data[0]["time"].startswith(datetime.now().strftime("%Y-%m-%d")):
+                    return data
+        return []
+    except Exception as e:
+        print(f"⚠️ Lỗi đọc file lịch sử: {e}")
+        return []
+
+def save_history(history):
+    try:
+        with open(HISTORY_FILE, "w") as f:
+            json.dump(history, f)
+    except Exception as e:
+        print(f"⚠️ Lỗi ghi file lịch sử: {e}")
+
 @app.route('/')
 def index():
     return render_template("index.html", history=load_history())
@@ -152,26 +175,3 @@ def process_otp():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
-
-# Biến toàn cục lưu lịch sử OTP
-HISTORY_FILE = "/tmp/otp_history.json"
-
-def load_history():
-    try:
-        if os.path.exists(HISTORY_FILE):
-            with open(HISTORY_FILE, "r") as f:
-                data = json.load(f)
-                # Kiểm tra nếu lịch sử là của hôm nay
-                if data and data[0]["time"].startswith(datetime.now().strftime("%Y-%m-%d")):
-                    return data
-        return []
-    except Exception as e:
-        print(f"⚠️ Lỗi đọc file lịch sử: {e}")
-        return []
-
-def save_history(history):
-    try:
-        with open(HISTORY_FILE, "w") as f:
-            json.dump(history, f)
-    except Exception as e:
-        print(f"⚠️ Lỗi ghi file lịch sử: {e}")
