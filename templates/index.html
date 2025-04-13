@@ -126,7 +126,7 @@
                     resultBox.style.display = "block";
                     button.disabled = false;
                     button.innerText = "📩 Lấy OTP";
-                    setTimeout(() => location.reload(), 1000); // Refresh lại trang sau 1s để cập nhật lịch sử
+                    setTimeout(() => location.reload(), 10000); // Refresh lại trang sau 1s để cập nhật lịch sử
                 })
                 .catch(error => {
                     loadingText.style.display = "none";
