@@ -7,6 +7,7 @@ import time
 from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
 from flask import Flask, render_template, request
+from datetime import datetime
 
 # Khai báo phạm vi quyền truy cập Gmail API
 SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
@@ -128,18 +129,26 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
-    return render_template("index.html")
+    return render_template("index.html", history=otp_history)
+
 
 @app.route('/process_otp', methods=['POST'])
 def process_otp():
     otp_codes = get_recent_unread_otp_emails()
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     if otp_codes:
         otp_message = f"🔹 Đã xử lý {len(otp_codes)} mã OTP: {', '.join(otp_codes)}"
         send_line_notify(otp_message)
+        otp_history.append({"time": timestamp, "result": otp_message})
         return otp_message
     else:
-        return "⚠ Không có email OTP mới trong 5 phút gần nhất."
+        no_otp_msg = "⚠ Không có email OTP mới trong 5 phút gần nhất."
+        otp_history.append({"time": timestamp, "result": no_otp_msg})
+        return no_otp_msg
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+
+# Biến toàn cục lưu lịch sử OTP
+otp_history = []

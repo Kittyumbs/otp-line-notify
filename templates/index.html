@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='90'>📩</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='90'>📩</text></svg>">
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -52,6 +52,34 @@
             display: none;
             margin-top: 15px;
         }
+        .history {
+            max-width: 700px;
+            margin: 40px auto 0;
+            text-align: left;
+            background-color: #e0f7fa;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .history h2 {
+            color: #006666;
+            font-size: 22px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .history-entry {
+            margin-bottom: 12px;
+            padding: 10px;
+            border-left: 4px solid #008080;
+            background-color: #ffffff;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .history-entry time {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+            color: #444;
+        }
     </style>
 </head>
 <body>
@@ -63,6 +91,21 @@
     <p class="loading" id="loadingText">⏳ Đang lấy mã OTP, vui lòng chờ...</p>
     
     <div id="otpResult" class="result-box"></div>
+
+    <!-- LỊCH SỬ OTP -->
+    <div class="history">
+        <h2>📜 Lịch sử xử lý OTP</h2>
+        {% if history %}
+            {% for item in history|reverse %}
+                <div class="history-entry">
+                    <time>{{ item.time }}</time>
+                    <div>{{ item.result }}</div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>Chưa có lịch sử xử lý nào.</p>
+        {% endif %}
+    </div>
 
     <script>
         document.getElementById("fetchOtp").addEventListener("click", function() {
@@ -83,6 +126,7 @@
                     resultBox.style.display = "block";
                     button.disabled = false;
                     button.innerText = "📩 Lấy OTP";
+                    setTimeout(() => location.reload(), 1000); // Refresh lại trang sau 1s để cập nhật lịch sử
                 })
                 .catch(error => {
                     loadingText.style.display = "none";
