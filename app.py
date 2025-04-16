@@ -152,6 +152,9 @@ def save_history(data):
 def index():
     return render_template("index.html", history=load_history())
 
+def privacy():
+    return render_template("privacy.html")
+
 @app.route("/process_otp", methods=["POST"])
 def process_otp():
     vn_time = datetime.now(timezone("Asia/Ho_Chi_Minh")).strftime("%Y-%m-%d %H:%M:%S")
