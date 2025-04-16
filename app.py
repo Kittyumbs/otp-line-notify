@@ -7,6 +7,7 @@ import time
 import json
 from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
+from google.auth.credentials import Credentials
 from flask import Flask, render_template, request
 from datetime import datetime
 from pytz import timezone
@@ -27,20 +28,26 @@ def gmail_authenticate():
             creds = pickle.loads(token_data)
 
             print("📌 Kiểm tra trạng thái token...")
-            creds.expired = True
+
             if not creds:
                 print("❌ Không tạo được credentials từ token!")
                 return None
 
+            # Giả lập token hết hạn (để thử refresh)
+            creds.expired = True  # Giả lập rằng token đã hết hạn
+            creds.refresh_token = "dummy_refresh_token"  # Giả lập refresh_token
+
             # Nếu token hết hạn và có refresh_token thì làm mới
             if creds.expired and creds.refresh_token:
                 print("🔄 Token hết hạn, thử refresh...")
+
+                # Refresh token
                 creds.refresh(Request())
                 print("✅ Token đã được làm mới!")
 
                 # ➕ Cập nhật TOKEN_PICKLE mới lên Heroku
                 try:
-                    new_token_pickle = base64.b64encode(pickle.dumps(creds)).decode()
+                    new_token_pickle = base64.b64encode(pickle.dumps(creds)).decode('utf-8')
                     update_heroku_token(new_token_pickle)
                 except Exception as e:
                     print(f"⚠️ Không thể cập nhật token mới lên Heroku: {e}")
