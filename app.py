@@ -13,7 +13,7 @@ from pytz import timezone
 from flask_cors import CORS
 
 # Khai báo phạm vi quyền truy cập Gmail API
-SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
+SCOPES = ["https://www.googleapis.com/auth/gmail.modfy"]
 
 def gmail_authenticate():
     """Xác thực OAuth2 từ biến môi trường trên Heroku và cập nhật token nếu cần."""
@@ -27,7 +27,7 @@ def gmail_authenticate():
             creds = pickle.loads(token_data)
 
             print("📌 Kiểm tra trạng thái token...")
-
+            creds.expired = True
             if not creds:
                 print("❌ Không tạo được credentials từ token!")
                 return None
