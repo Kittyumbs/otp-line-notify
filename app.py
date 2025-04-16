@@ -9,13 +9,14 @@ from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
 from flask import Flask, render_template, request
 from datetime import datetime
+from pytz import timezone
 from flask_cors import CORS
 
 # Khai báo phạm vi quyền truy cập Gmail API
 SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
 
 def gmail_authenticate():
-    """Xác thực OAuth2 từ biến môi trường trên Heroku."""
+    """Xác thực OAuth2 từ biến môi trường trên Heroku và cập nhật token nếu cần."""
     creds = None
 
     if "TOKEN_PICKLE" in os.environ:
@@ -31,11 +32,20 @@ def gmail_authenticate():
                 print("❌ Không tạo được credentials từ token!")
                 return None
 
+            # Nếu token hết hạn và có refresh_token thì làm mới
             if creds.expired and creds.refresh_token:
                 print("🔄 Token hết hạn, thử refresh...")
                 creds.refresh(Request())
                 print("✅ Token đã được làm mới!")
 
+                # ➕ Cập nhật TOKEN_PICKLE mới lên Heroku
+                try:
+                    new_token_pickle = base64.b64encode(pickle.dumps(creds)).decode()
+                    update_heroku_token(new_token_pickle)
+                except Exception as e:
+                    print(f"⚠️ Không thể cập nhật token mới lên Heroku: {e}")
+
+            # Sau refresh mà vẫn không hợp lệ thì thoát
             if not creds.valid:
                 print("❌ Token không hợp lệ ngay cả sau khi refresh!")
                 return None
@@ -109,25 +119,6 @@ def get_recent_unread_otp_emails():
         print(f"❌ Lỗi khi lấy OTP từ Gmail: {e}")
         return []
 
-def send_line_notify(message):
-    """Gửi OTP qua LINE Notify."""
-    line_token = os.getenv("LINE_NOTIFY_TOKEN", "")
-
-    if not line_token:
-        print("⚠ Không tìm thấy LINE_NOTIFY_TOKEN trong biến môi trường!")
-        return False
-
-    headers = {"Authorization": f"Bearer {line_token}"}
-    data = {"message": message}
-    response = requests.post("https://notify-api.line.me/api/notify", headers=headers, data=data)
-
-    if response.status_code == 200:
-        print("✅ Đã gửi OTP qua LINE Notify thành công!")
-        return True
-    else:
-        print(f"❌ Lỗi khi gửi LINE Notify: {response.text}")
-        return False
-
 # Flask app
 app = Flask(__name__)
 CORS(app)  # Cho phép gọi API từ extension
@@ -161,7 +152,10 @@ def index():
 
 @app.route('/process_otp', methods=['POST'])
 def process_otp():
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # ⏰ Lấy giờ theo múi giờ Việt Nam
+    vn_time = datetime.now(timezone("Asia/Ho_Chi_Minh"))
+    timestamp = vn_time.strftime("%Y-%m-%d %H:%M:%S")
+    
     history = load_history()
 
     try:
@@ -169,7 +163,6 @@ def process_otp():
 
         if otp_codes:
             otp_message = f"🔹 Đã xử lý {len(otp_codes)} mã OTP: {', '.join(otp_codes)}"
-            send_line_notify(otp_message)
         else:
             otp_message = "⚠ Không có email OTP mới trong 5 phút gần nhất."
 
@@ -181,6 +174,31 @@ def process_otp():
 
     return otp_message
 
+def update_heroku_token(new_token):
+    """Gửi PATCH request lên Heroku để cập nhật TOKEN_PICKLE mới."""
+    heroku_api_key = os.getenv("HEROKU_API_KEY")
+    app_name = os.getenv("HEROKU_APP_NAME")
+    if not heroku_api_key or not app_name:
+        print("⚠️ HEROKU_API_KEY hoặc HEROKU_APP_NAME chưa được cấu hình.")
+        return False
+
+    url = f"https://api.heroku.com/apps/{app_name}/config-vars"
+    headers = {
+        "Accept": "application/vnd.heroku+json; version=3",
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {heroku_api_key}"
+    }
+
+    data = {"TOKEN_PICKLE": new_token}
+
+    response = requests.patch(url, headers=headers, data=json.dumps(data))
+
+    if response.status_code == 200:
+        print("✅ Đã cập nhật TOKEN_PICKLE mới lên Heroku thành công!")
+        return True
+    else:
+        print(f"❌ Lỗi khi cập nhật TOKEN_PICKLE: {response.text}")
+        return False
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
