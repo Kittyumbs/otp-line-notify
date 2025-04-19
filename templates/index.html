@@ -154,7 +154,7 @@
             let resultBox = document.getElementById("otpResult");
 
             button.disabled = true;
-            button.innerHTML = '<img src="C:\Users\Kittyumbs\Documents\OTP_TikTok\static\processing-icon.png">';
+            button.innerHTML = '<img src="/static/processing-icon.png">';
             loadingText.style.display = "block";
             resultBox.style.display = "none";
 
@@ -162,10 +162,10 @@
                 .then(response => response.text())
                 .then(data => {
                     loadingText.style.display = "none";
-                    resultBox.innerText = data;
+                    resultBox.innerHTML = data;
                     resultBox.style.display = "block";
                     button.disabled = false;
-                    button.innerHTML = '<img src="C:\Users\Kittyumbs\Documents\OTP_TikTok\static\click-icon.png">Lấy OTP';
+                    button.innerHTML = '<img src="/static/click-icon.png">Lấy OTP';
                     setTimeout(() => location.reload(), 5000); // Refresh lại trang sau 5s để cập nhật lịch sử
                 })
                 .catch(error => {
@@ -173,7 +173,7 @@
                     resultBox.innerText = "❌ Lỗi khi lấy OTP! (liên hệ: 212078)";
                     resultBox.style.display = "block";
                     button.disabled = false;
-                    button.innerText = '<img src="C:\Users\Kittyumbs\Documents\OTP_TikTok\static\click-icon.png">Lấy OTP';
+                    button.innerHTML = '<img src="/static/click-icon.png">Lấy OTP';
                 });
         });
     </script>
