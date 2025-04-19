@@ -7,8 +7,9 @@ import pickle
 import requests
 from datetime import datetime
 from pytz import timezone
+from markupsafe import Markup
 from flask import Flask, render_template, request
-from flask import Markup, url_for
+from flask import url_for
 from flask_cors import CORS
 from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
