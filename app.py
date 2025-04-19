@@ -165,11 +165,11 @@ def process_otp():
     try:
         otps = get_recent_unread_otp_emails()
         if otps:
-            msg = f"<img src='{url_for('static', filename='success-icon.png')}' height='20'> Đã xử lý {len(otps)} mã OTP: {', '.join(otps)}"
+            msg = f"<i class='fas fa-check-circle' style='color: green;'></i> Đã xử lý {len(otps)} mã OTP: {', '.join(otps)}"
         else:
-            msg = f"<img src='{url_for('static', filename='Warning-icon.png')}' height='20'> Không có email OTP mới trong 5 phút gần nhất."
+            msg = "<i class='fas fa-exclamation-circle' style='color: orange;'></i> Không có email OTP mới trong 5 phút gần nhất."
     except Exception as e:
-        msg = f"<img src='{url_for('static', filename='Warning-icon.png')}' height='20'> Lỗi xử lý OTP: {e}"
+        msg = f"<i class='fas fa-exclamation-circle' style='color: red;'></i> Lỗi xử lý OTP: {e}"
 
     history.append({"time": vn_time, "result": msg})
     save_history(history)

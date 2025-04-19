@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='Mail-icon.png') }}">
-
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OTP Tiktok MWG</title>
@@ -132,50 +132,43 @@
     
     <div id="otpResult" class="result-box"></div>
 
-    <!-- LỊCH SỬ OTP -->
-    <div class="history">
-        <h2><img src="{{ url_for('static', filename='history-icon.png')}}"> Lịch sử xử lý</h2>
-        {% if history %}
-            {% for item in history|reverse %}
-                <div class="history-entry">
-                    <time>{{ item.time }}</time>
-                    <div>{{ item.result | safe }}</div>
-                </div>
-            {% endfor %}
-        {% else %}
-            <p>Chưa có lịch sử xử lý nào 😳.</p>
-        {% endif %}
-    </div>
+    <!-- Lịch sử xử lý -->
+<div style="background-color: #e6f0ff; padding: 20px; border-radius: 10px; margin-top: 40px;">
+    <h3 style="color: #1a3e80; display: flex; align-items: center;">
+        <i class="fas fa-receipt" style="margin-right: 10px;"></i> Lịch sử xử lý
+    </h3>
+    <div id="otpHistory"></div>
+</div>
 
-    <script>
-        document.getElementById("fetchOtp").addEventListener("click", function() {
-            let button = this;
-            let loadingText = document.getElementById("loadingText");
-            let resultBox = document.getElementById("otpResult");
+<script>
+    function renderHistory(history) {
+        const historyContainer = document.getElementById("otpHistory");
+        historyContainer.innerHTML = "";
 
-            button.disabled = true;
-            button.innerHTML = '<img src="/static/processing-icon.png">';
-            loadingText.style.display = "block";
-            resultBox.style.display = "none";
+        history.forEach(entry => {
+            const div = document.createElement("div");
+            div.style.marginTop = "10px";
+            div.style.padding = "10px 15px";
+            div.style.backgroundColor = "#ffffff";
+            div.style.borderRadius = "10px";
+            div.style.boxShadow = "0 2px 6px rgba(0,0,0,0.05)";
+            div.style.display = "flex";
+            div.style.alignItems = "center";
+            div.style.gap = "10px";
 
-            fetch('/process_otp', { method: 'POST' })
-                .then(response => response.text())
-                .then(data => {
-                    loadingText.style.display = "none";
-                    resultBox.innerHTML = data;
-                    resultBox.style.display = "block";
-                    button.disabled = false;
-                    button.innerHTML = '<img src="/static/click-icon.png">Lấy OTP';
-                    setTimeout(() => location.reload(), 5000); // Refresh lại trang sau 5s để cập nhật lịch sử
-                })
-                .catch(error => {
-                    loadingText.style.display = "none";
-                    resultBox.innerText = "❌ Lỗi khi lấy OTP! (liên hệ: 212078)";
-                    resultBox.style.display = "block";
-                    button.disabled = false;
-                    button.innerHTML = '<img src="/static/click-icon.png">Lấy OTP';
-                });
+            const timePart = document.createElement("div");
+            timePart.style.fontWeight = "bold";
+            timePart.style.minWidth = "150px";
+            timePart.textContent = entry.time;
+
+            const contentPart = document.createElement("div");
+            contentPart.innerHTML = entry.message;  // innerHTML để xử lý icon
+
+            div.appendChild(timePart);
+            div.appendChild(contentPart);
+            historyContainer.prepend(div);
         });
-    </script>
+    }
+</script>
 </body>
 </html>
