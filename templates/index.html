@@ -139,11 +139,11 @@
             {% for item in history|reverse %}
                 <div class="history-entry">
                     <time>{{ item.time }}</time>
-                    <div>{{ item.result }}</div>
+                    <div>{{ item.result | safe }}</div>
                 </div>
             {% endfor %}
         {% else %}
-            <p>Chưa có lịch sử xử lý nào hôm nay 😳.</p>
+            <p>Chưa có lịch sử xử lý nào 😳.</p>
         {% endif %}
     </div>
 
