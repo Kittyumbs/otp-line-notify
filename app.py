@@ -8,6 +8,7 @@ import requests
 from datetime import datetime
 from pytz import timezone
 from flask import Flask, render_template, request
+from flask import Markup, url_for
 from flask_cors import CORS
 from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
@@ -162,14 +163,17 @@ def process_otp():
 
     try:
         otps = get_recent_unread_otp_emails()
-        msg = f"🔹 Đã xử lý {len(otps)} mã OTP: {', '.join(otps)}" if otps else "⚠ Không có email OTP mới trong 5 phút gần nhất."
+        if otps:
+            msg = f"<img src='{url_for('static', filename='success-icon.png')}' height='20'> Đã xử lý {len(otps)} mã OTP: {', '.join(otps)}"
+        else:
+            msg = f"<img src='{url_for('static', filename='warning-icon.png')}' height='20'> Không có email OTP mới trong 5 phút gần nhất."
     except Exception as e:
-        msg = f"❌ Lỗi xử lý OTP: {e}"
+        msg = f"<img src='{url_for('static', filename='warning-icon.png')}' height='20'> Lỗi xử lý OTP: {e}"
 
     history.append({"time": vn_time, "result": msg})
     save_history(history)
 
-    return msg
+    return Markup(msg)  # Để Flask hiểu là HTML chứ không escape
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
