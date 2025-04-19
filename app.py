@@ -164,7 +164,6 @@ def load_history():
         print(f"⚠️ Lỗi đọc lịch sử từ GitHub: {e}")
         return []
 
-# Hàm lưu lịch sử OTP lên GitHub
 def save_history(data):
     url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/otp_history.json"
     headers = {"Authorization": f"token {GITHUB_TOKEN}"}
@@ -177,13 +176,16 @@ def save_history(data):
             file_info = response.json()
             sha = file_info["sha"]
 
+        # Mã hóa dữ liệu thành Base64
+        encoded_content = base64.b64encode(json.dumps(data, indent=4).encode('utf-8')).decode('utf-8')
+
         # Gửi yêu cầu PUT để lưu tệp lên GitHub
         commit_data = {
             "message": "Update OTP history",
-            "content": json.dumps(data, indent=4),
+            "content": encoded_content,  # Dữ liệu đã mã hóa Base64
             "sha": sha
         }
-        
+
         # Gửi yêu cầu PUT để lưu dữ liệu
         response = requests.put(url, headers=headers, data=json.dumps(commit_data))
         if response.status_code == 201 or response.status_code == 200:
