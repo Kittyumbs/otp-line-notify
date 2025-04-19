@@ -141,7 +141,7 @@ def get_recent_unread_otp_emails():
 
 # Hàm đọc lịch sử OTP từ GitHub
 def load_history():
-    url = f"https://api.github.com/repos/Kittyumbs/otp-line-notify/contents/otp_history.json?ref=master"
+    url = f"https://api.github.com/repos/Kittyumbs/otp-line-notify/contents/otp_history.json"
     headers = {"Authorization": f"token {GITHUB_TOKEN}"}
     
     try:
@@ -165,7 +165,7 @@ def load_history():
         return []
 
 def save_history(data):
-    url = f"https://api.github.com/repos/Kittyumbs/otp-line-notify/contents/otp_history.json?ref=master"
+    url = f"https://api.github.com/repos/Kittyumbs/otp-line-notify/contents/otp_history.json"
     headers = {"Authorization": f"token {GITHUB_TOKEN}"}
     
     try:
