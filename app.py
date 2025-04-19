@@ -167,9 +167,9 @@ def process_otp():
         if otps:
             msg = f"<img src='{url_for('static', filename='success-icon.png')}' height='20'> Đã xử lý {len(otps)} mã OTP: {', '.join(otps)}"
         else:
-            msg = f"<img src='{url_for('static', filename='warning-icon.png')}' height='20'> Không có email OTP mới trong 5 phút gần nhất."
+            msg = f"<img src='{url_for('static', filename='Warning-icon.png')}' height='20'> Không có email OTP mới trong 5 phút gần nhất."
     except Exception as e:
-        msg = f"<img src='{url_for('static', filename='warning-icon.png')}' height='20'> Lỗi xử lý OTP: {e}"
+        msg = f"<img src='{url_for('static', filename='Warning-icon.png')}' height='20'> Lỗi xử lý OTP: {e}"
 
     history.append({"time": vn_time, "result": msg})
     save_history(history)
