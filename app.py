@@ -165,7 +165,7 @@ def load_history():
         return []
 
 def save_history(data):
-    url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/otp_history.json"
+    url = f"https://api.github.com/repos/Kittyumbs/otp-line-notify/contents/otp_history.json?ref=master"
     headers = {"Authorization": f"token {GITHUB_TOKEN}"}
     
     try:
