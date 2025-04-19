@@ -2,92 +2,180 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <link rel="icon" href="{{ url_for('static', filename='Mail-icon.png') }}" type="image/png">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OTP TikTok MWG</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-  <style>
-    /* Giữ nguyên styles cũ của bạn… */
-  </style>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='Mail-icon.png') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTP Tiktok MWG</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', 'Roboto', sans-serif;
+            text-align: center;
+            background-color: #f4f8fb;
+            padding: 20px;
+            color: #1e293b;
+        }
+    
+        h1 {
+            color: #1d4ed8;
+            font-size: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+    
+        h1 img {
+            height: 36px;
+            vertical-align: middle;
+        }
+    
+        p {
+            font-size: 18px;
+            color: #334155;
+            margin-top: 10px;
+        }
+    
+        .button {
+            background: linear-gradient(to right, #60a5fa, #2563eb);
+            color: white;
+            padding: 12px 24px;
+            font-size: 18px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+    
+        .button img {
+            height: 24px;
+        }
+    
+        .button:hover {
+            background: linear-gradient(to right, #2563eb, #1e40af);
+        }
+    
+        .result-box {
+            margin: 25px auto 0;
+            padding: 15px 20px;
+            font-size: 22px;
+            color: #1e3a8a;
+            background-color: #dbeafe;
+            border-left: 5px solid #3b82f6;
+            border-radius: 12px;
+            max-width: 600px;
+            display: none;
+        }
+    
+        .loading {
+            font-size: 18px;
+            color: #1e40af;
+            font-weight: bold;
+            margin-top: 15px;
+            display: none;
+        }
+    
+        .history {
+            max-width: 700px;
+            margin: 40px auto 0;
+            text-align: left;
+            background-color: #e0f2fe;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+    
+        .history h2 {
+            color: #1d4ed8;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+    
+        .history h2 img {
+            height: 28px;
+        }
+    
+        .history-entry {
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            border-left: 4px solid #3b82f6;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+        }
+    
+        .history-entry time {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 6px;
+            color: #475569;
+        }
+    </style>    
 </head>
 <body>
-  <h1><img src="{{ url_for('static', filename='otp-icon.png') }}"> TIKTOK OTP</h1>
-  <p>Website sẽ lấy mã OTP từ email TikTok và in ra màn hình.</p>
+    <h1> <img src="{{ url_for('static', filename='otp-icon.png')}}"> TIKTOK OTP</h1>
+    <p>Website sẽ lấy mã OTP từ email TikTok và in ra màn hình.</p>
 
-  <button id="fetchOtp" class="button">
-    <i class="fas fa-bolt"></i> Lấy OTP
-  </button>
-  <p class="loading" id="loadingText">Đang lấy mã OTP...</p>
-  <div id="otpResult" class="result-box"></div>
+    <button id="fetchOtp" class="button"><img src="{{ url_for('static', filename='click-icon.png')}}"> Lấy OTP</button>
+    
+    <p class="loading" id="loadingText">Đang lấy mã OTP, vui lòng chờ...</p>
+    
+    <div id="otpResult" class="result-box"></div>
 
-  <div style="background:#e6f0ff;padding:20px;border-radius:10px;margin-top:40px;">
-    <h3 style="color:#1a3e80;display:flex;align-items:center;gap:8px;">
-      <i class="fas fa-receipt"></i> Lịch sử xử lý
-    </h3>
-    <div id="otpHistory"></div>
-  </div>
+    <!-- LỊCH SỬ OTP -->
+    <div class="history">
+        <h2><img src="{{ url_for('static', filename='history-icon.png') }}"> Lịch sử xử lý</h2>
+        {% if history %}
+            {% for item in history|reverse %}
+                <div class="history-entry">
+                    <time>{{ item.time }}</time>
+                    <div>{{ item.result | safe }}</div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>Chưa có lịch sử xử lý nào hôm nay 😳.</p>
+        {% endif %}
+    </div>
 
-  <script>
-    function renderHistory(history) {
-      const c = document.getElementById("otpHistory");
-      c.innerHTML = "";
-      history.forEach(entry => {
-        const row = document.createElement("div");
-        Object.assign(row.style, {
-          display: "flex", alignItems: "center", gap: "10px",
-          background: "#fff", padding: "10px", borderRadius: "8px",
-          boxShadow: "0 2px 4px rgba(0,0,0,0.05)", marginTop: "10px"
+    <script>
+        document.getElementById("fetchOtp").addEventListener("click", function() {
+            let button = this;
+            let loadingText = document.getElementById("loadingText");
+            let resultBox = document.getElementById("otpResult");
+
+            button.disabled = true;
+            button.innerHTML = '<img src="/static/processing-icon.png">';
+            loadingText.style.display = "block";
+            resultBox.style.display = "none";
+
+            fetch('/process_otp', { method: 'POST' })
+                .then(response => response.text())
+                .then(data => {
+                    loadingText.style.display = "none";
+                    resultBox.innerHTML = data;
+                    resultBox.style.display = "block";
+                    button.disabled = false;
+                    button.innerHTML = '<img src="/static/click-icon.png"> Lấy OTP';
+                    setTimeout(() => location.reload(), 5000);
+                })
+                .catch(error => {
+                    loadingText.style.display = "none";
+                    resultBox.innerText = "❌ Lỗi khi lấy OTP! (liên hệ: 212078)";
+                    resultBox.style.display = "block";
+                    button.disabled = false;
+                    button.innerHTML = '<img src="/static/click-icon.png"> Lấy OTP';
+                });
         });
-        const t = document.createElement("div");
-        t.style.fontWeight = "bold";
-        t.style.minWidth = "140px";
-        t.textContent = entry.time;
-        const m = document.createElement("div");
-        m.innerHTML = entry.result;
-        row.append(t, m);
-        c.prepend(row);
-      });
-    }
-
-    function fetchHistory() {
-      fetch("/history")
-        .then(r => r.json())
-        .then(renderHistory);
-    }
-
-    document.addEventListener("DOMContentLoaded", () => {
-      fetchHistory();
-      const btn = document.getElementById("fetchOtp");
-      const ld = document.getElementById("loadingText");
-      const out = document.getElementById("otpResult");
-
-      btn.addEventListener("click", () => {
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý';
-        ld.style.display = "block";
-        out.style.display = "none";
-
-        fetch("/process_otp", { method: "POST" })
-          .then(r => r.text())
-          .then(html => {
-            ld.style.display = "none";
-            out.innerHTML = html; out.style.display = "block";
-            fetchHistory();
-          })
-          .catch(() => {
-            ld.style.display = "none";
-            out.innerText = "❌ Lỗi khi lấy OTP";
-            out.style.display = "block";
-            fetchHistory();
-          })
-          .finally(() => {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-bolt"></i> Lấy OTP';
-          });
-      });
-    });
-  </script>
+    </script>
 </body>
 </html>
