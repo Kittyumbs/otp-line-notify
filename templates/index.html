@@ -141,34 +141,35 @@
 </div>
 
 <script>
-    function renderHistory(history) {
-        const historyContainer = document.getElementById("otpHistory");
-        historyContainer.innerHTML = "";
+    document.getElementById("fetchOtp").addEventListener("click", function() {
+        let button = this;
+        let loadingText = document.getElementById("loadingText");
+        let resultBox = document.getElementById("otpResult");
 
-        history.forEach(entry => {
-            const div = document.createElement("div");
-            div.style.marginTop = "10px";
-            div.style.padding = "10px 15px";
-            div.style.backgroundColor = "#ffffff";
-            div.style.borderRadius = "10px";
-            div.style.boxShadow = "0 2px 6px rgba(0,0,0,0.05)";
-            div.style.display = "flex";
-            div.style.alignItems = "center";
-            div.style.gap = "10px";
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+        loadingText.style.display = "block";
+        resultBox.style.display = "none";
 
-            const timePart = document.createElement("div");
-            timePart.style.fontWeight = "bold";
-            timePart.style.minWidth = "150px";
-            timePart.textContent = entry.time;
-
-            const contentPart = document.createElement("div");
-            contentPart.innerHTML = entry.message;  // innerHTML để xử lý icon
-
-            div.appendChild(timePart);
-            div.appendChild(contentPart);
-            historyContainer.prepend(div);
-        });
-    }
+        fetch('/process_otp', { method: 'POST' })
+            .then(response => response.text())
+            .then(data => {
+                loadingText.style.display = "none";
+                resultBox.innerHTML = data;
+                resultBox.style.display = "block";
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-bolt"></i> Lấy OTP';
+                setTimeout(() => location.reload(), 5000);
+            })
+            .catch(error => {
+                loadingText.style.display = "none";
+                resultBox.innerText = "❌ Lỗi khi lấy OTP! (liên hệ: 212078)";
+                resultBox.style.display = "block";
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-bolt"></i> Lấy OTP';
+            });
+    });
 </script>
+
 </body>
 </html>
