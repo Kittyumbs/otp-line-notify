@@ -15,6 +15,16 @@ from flask_cors import CORS
 from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
 
+# Lấy GitHub Token từ biến môi trường
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+
+# Kiểm tra nếu token không tồn tại trong môi trường
+if GITHUB_TOKEN is None:
+    raise ValueError("GITHUB_TOKEN không được cấu hình trong môi trường!")
+
+# Thông tin về GitHub repository
+GITHUB_REPO = "Kittyumbs/otp-line-notify"    
+
 # Khai báo phạm vi Gmail API
 SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
 
@@ -129,27 +139,59 @@ def get_recent_unread_otp_emails():
         print(f"❌ Lỗi khi truy vấn Gmail: {e}")
         return []
 
+# Hàm đọc lịch sử OTP từ GitHub
 def load_history():
-    """Đọc lịch sử OTP từ file."""
+    url = f"https://api.github.com/repos/Kittyumbs/otp-line-notify/contents/otp_history.json?ref=master"
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+    
     try:
-        if os.path.exists(HISTORY_FILE):
-            with open(HISTORY_FILE, "r") as f:
-                data = json.load(f)
-                today = datetime.now().strftime("%Y-%m-%d")
-                if data and data[0]["time"].startswith(today):
-                    return data
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            file_info = response.json()
+            sha = file_info["sha"]
+            
+            # Lấy nội dung tệp từ GitHub
+            file_url = file_info["download_url"]
+            file_response = requests.get(file_url)
+            history_data = json.loads(file_response.text)
+            today = datetime.now().strftime("%Y-%m-%d")
+            
+            # Kiểm tra lịch sử theo ngày
+            if history_data and history_data[0]["time"].startswith(today):
+                return history_data
         return []
     except Exception as e:
-        print(f"⚠️ Lỗi đọc lịch sử: {e}")
+        print(f"⚠️ Lỗi đọc lịch sử từ GitHub: {e}")
         return []
 
+# Hàm lưu lịch sử OTP lên GitHub
 def save_history(data):
-    """Lưu lịch sử OTP vào file."""
+    url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/otp_history.json"
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+    
     try:
-        with open(HISTORY_FILE, "w") as f:
-            json.dump(data, f)
+        # Lấy nội dung cũ và thông tin sha
+        response = requests.get(url, headers=headers)
+        sha = None
+        if response.status_code == 200:
+            file_info = response.json()
+            sha = file_info["sha"]
+
+        # Gửi yêu cầu PUT để lưu tệp lên GitHub
+        commit_data = {
+            "message": "Update OTP history",
+            "content": json.dumps(data, indent=4),
+            "sha": sha
+        }
+        
+        # Gửi yêu cầu PUT để lưu dữ liệu
+        response = requests.put(url, headers=headers, data=json.dumps(commit_data))
+        if response.status_code == 201 or response.status_code == 200:
+            print("✅ Lịch sử OTP đã được lưu vào GitHub!")
+        else:
+            print(f"❌ Lỗi khi lưu lịch sử OTP vào GitHub: {response.text}")
     except Exception as e:
-        print(f"⚠️ Lỗi ghi lịch sử: {e}")
+        print(f"⚠️ Lỗi ghi lịch sử vào GitHub: {e}")
 
 @app.route("/")
 def index():
