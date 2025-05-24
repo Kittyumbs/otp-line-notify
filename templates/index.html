@@ -134,7 +134,7 @@
 
     <!-- LỊCH SỬ OTP -->
     <div class="history">
-        <h2><img src="{{ url_for('static', filename='history-icon.png') }}"> Lịch sử xử lý cập nhật trong 5p</h2>
+        <h2><img src="{{ url_for('static', filename='history-icon.png') }}"> Lịch sử xử lý (cập nhật trong 5 phút)</h2>
         {% if history %}
             {% for item in history|reverse %}
                 <div class="history-entry">
